@@ -1,0 +1,57 @@
+/* Marketplace — tabs, listing rows */
+/* ===== MARKETPLACE ===== */
+.market-tabs { display: flex; background: #fff; border-radius: 999px; padding: 4px; box-shadow: var(--shadow-sm); }
+.market-tabs button {
+  background: none; border: none; color: var(--ink-1);
+  padding: 9px 20px; border-radius: 999px; cursor: pointer;
+  font-family: var(--display); font-weight: 600; font-size: 13px;
+}
+.market-tabs button.on { background: linear-gradient(180deg, var(--blue), var(--blue-d)); color: #fff; box-shadow: 0 3px 0 rgba(28,84,184,0.4); }
+
+.listings {
+  background: #fff; border-radius: 22px; overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+.listings-header {
+  display: grid; grid-template-columns: 2.6fr 1.4fr 1.1fr 1.1fr 1.2fr 1fr;
+  gap: 16px; padding: 16px 24px; align-items: center;
+  background: var(--bg-3);
+  border-bottom: 2px dashed var(--hair);
+  font-family: var(--display); font-weight: 600; font-size: 10px; letter-spacing: 1.5px; color: var(--ink-2); text-transform: uppercase;
+}
+.listing-row {
+  display: grid; grid-template-columns: 2.6fr 1.4fr 1.1fr 1.1fr 1.2fr 1fr;
+  gap: 16px; padding: 18px 24px; align-items: center;
+  border-bottom: 1px solid var(--hair); transition: background .15s;
+}
+.listing-row:last-child { border-bottom: none; }
+.listing-row:hover { background: var(--bg-3); }
+.lst-card-cell { display: flex; gap: 14px; align-items: center; }
+.lst-mini { transform: scale(0.6); transform-origin: left center; width: 100px; }
+.lst-ticker { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--blue); letter-spacing: 1px; display: flex; gap: 6px; align-items: center; }
+.lst-rarity { font-size: 11px; }
+.lst-name { font-family: var(--display); font-weight: 500; color: var(--ink-1); font-size: 13px; margin-top: 2px; }
+.lst-sector { font-family: var(--display); font-weight: 600; font-size: 10px; letter-spacing: 1.5px; margin-top: 4px; text-transform: uppercase; }
+
+.lst-seller { display: flex; gap: 10px; align-items: center; }
+.lst-avatar {
+  width: 36px; height: 36px; border-radius: 12px;
+  background: linear-gradient(135deg, #ffd736, #ff7a3c);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--display); font-weight: 700; color: #fff; font-size: 15px;
+  box-shadow: var(--shadow-sm);
+}
+.lst-seller-name { font-family: var(--display); font-weight: 600; font-size: 13px; color: var(--ink-0); }
+.lst-time { font-family: var(--mono); font-size: 10px; color: var(--ink-3); margin-top: 2px; }
+.lst-value, .lst-price { font-family: var(--display); }
+.lst-value .ds-val { font-size: 17px; }
+.lst-price .ds-val { font-size: 17px; }
+.lst-ratio { font-family: var(--display); font-weight: 600; font-size: 10px; color: var(--ink-3); margin-top: 4px; letter-spacing: 0.5px; }
+.lst-ratio.good { color: var(--up); }
+
+.badge {
+  display: inline-block; padding: 5px 11px; border-radius: 999px;
+  font-family: var(--display); font-weight: 600; font-size: 10px; letter-spacing: 1px;
+}
+.badge.sale  { background: rgba(255,215,54,0.2); color: #8a6800; border: 1px solid #ffd736; }
+.badge.trade { background: rgba(22,163,74,0.12); color: var(--up); border: 1px solid rgba(22,163,74,0.4); }

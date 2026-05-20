@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StockDex — Bourse · Cartes · Collection</title>
+
+  <link rel="stylesheet" href="styles/fonts.css">
+  <link rel="stylesheet" href="styles/variables.css">
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/typography.css">
+  <link rel="stylesheet" href="styles/layout.css">
+  <link rel="stylesheet" href="styles/buttons.css">
+  <link rel="stylesheet" href="styles/home.css">
+  <link rel="stylesheet" href="styles/boosters.css">
+  <link rel="stylesheet" href="styles/collection.css">
+  <link rel="stylesheet" href="styles/detail.css">
+  <link rel="stylesheet" href="styles/marketplace.css">
+  <link rel="stylesheet" href="styles/trade.css">
+  <link rel="stylesheet" href="styles/toast.css">
+  <link rel="stylesheet" href="styles/auth.css">
+  <link rel="stylesheet" href="styles/wallet.css">
+  <link rel="stylesheet" href="styles/responsive.css">
+</head>
+<body>
+
+<div id="root"></div>
+
+<!-- React + Babel standalone -->
+<script src="vendor/react.development.js"></script>
+<script src="vendor/react-dom.development.js"></script>
+<script src="vendor/babel.standalone.js"></script>
+
+<!-- Plain-JS data + API client (no JSX) -->
+<script src="scripts/data.js"></script>
+<script src="scripts/api.js"></script>
+
+<!-- Components & screens — load order matters: chrome / card before screens,
+     overlays before app.jsx, app.jsx last. Each is a classic <script>, so
+     top-level declarations become globals accessible from later scripts. -->
+<script type="text/babel" src="scripts/components/card.jsx"></script>
+<script type="text/babel" src="scripts/components/chrome.jsx"></script>
+<script type="text/babel" src="scripts/screens/auth.jsx"></script>
+<script type="text/babel" src="scripts/screens/home.jsx"></script>
+<script type="text/babel" src="scripts/screens/boosters.jsx"></script>
+<script type="text/babel" src="scripts/screens/collection.jsx"></script>
+<script type="text/babel" src="scripts/screens/marketplace.jsx"></script>
+<script type="text/babel" src="scripts/screens/wallet.jsx"></script>
+<script type="text/babel" src="scripts/overlays/booster-open.jsx"></script>
+<script type="text/babel" src="scripts/overlays/card-detail.jsx"></script>
+<script type="text/babel" src="scripts/overlays/sell.jsx"></script>
+<script type="text/babel" src="scripts/app.jsx"></script>
+
+</body>
+</html>

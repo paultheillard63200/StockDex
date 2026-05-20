@@ -1,0 +1,17 @@
+{
+  "name": "stockdex",
+  "version": "0.1.0",
+  "private": true,
+  "description": "StockDex — bourse fictive, ouverture de boosters, collection, marketplace",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @stockdex/server",
+    "start": "npm run start --workspace @stockdex/server",
+    "server": "npm run dev --workspace @stockdex/server"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

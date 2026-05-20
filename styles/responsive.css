@@ -1,0 +1,14 @@
+/* Responsive — narrow viewports */
+/* ===== responsive lite ===== */
+@media (max-width: 1280px) {
+  .booster-grid { grid-template-columns: repeat(3, 1fr); }
+  .sets-grid { grid-template-columns: repeat(3, 1fr); }
+  .reveal-fan { flex-wrap: wrap; }
+}
+@media (max-width: 900px) {
+  .home-hero { grid-template-columns: 1fr; }
+  .home-hero-cards { display: none; }
+  .panel-row { grid-template-columns: 1fr; }
+  .booster-grid, .sets-grid { grid-template-columns: repeat(2, 1fr); }
+  .detail-panel { grid-template-columns: 1fr; }
+}

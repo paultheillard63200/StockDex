@@ -1,0 +1,23 @@
+/* Reset, document, scrollbar — global resets and the page background. */
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  font-family: var(--sans);
+  color: var(--ink-0);
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  background:
+    radial-gradient(1200px 700px at 20% -10%, #e7f3fe 0%, transparent 60%),
+    radial-gradient(900px 600px at 110% 20%, #f6e6ff 0%, transparent 55%),
+    radial-gradient(900px 600px at 50% 110%, #fff6d4 0%, transparent 55%),
+    linear-gradient(180deg, var(--bg-1) 0%, var(--bg-0) 100%);
+  min-height: 100vh;
+}
+#root { min-height: 100vh; }
+
+/* ===== scrollbar ===== */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--hair-strong); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--blue); }

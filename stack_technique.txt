@@ -1,0 +1,42 @@
+ Frontend :
+
+React 18 — la base. L'app est une SPA monovue avec quatre routes internes (Place, Boosters, Collection, Marketplace) et deux overlays (ouverture de booster, trade). React s'impose ici parce que la composition d'écrans et les animations d'état (phases de l'ouverture de booster, slot offerings d'un trade, hover/tilt sur les cartes) sont naturellement décrites comme un arbre de composants avec hooks. Vue aurait fait l'affaire ; React a été retenu parce que les composants existants (`StockCard`, `BoosterOpenOverlay`, etc.) étaient déjà écrits dessus — réécrire en SFC `.vue` aurait coûté plus qu'il n'aurait apporté à un proto.
+
+Babel Standalone (inbrowser, via `<script type="text/babel">`) — pas de build step. Tout le JSX est transpilé à la volée au chargement de la page. C'est lent en démarrage (Babel pèse ~3 Mo nonminifié) mais ça supprime entièrement la toolchain : pas de `package.json` côté client, pas de `node_modules`, pas de `vite.config.js`, pas de bundler à comprendre. Pour un prototype d'une semaine c'est honnête. Pour la prod, on bascule sur Vite + un build ESM (cf. § "Pour aller plus loin").
+
+État local React (`useState` / `useMemo` / `useCallback`) — un seul `<App>` au sommet possède tout : `route`, `owned`, `coins`, `gems`, `boosterPack`, `tradeListing`, `recentlyOpened`, `toast`. Une douzaine de `useState` flat, propagés par props et callbacks. Pas de Redux, pas de Pinia, pas de Context : il n'y a ni cache à invalider, ni état serveur, ni mutations à orchestrer. Ajouter un store serait du boilerplate gratuit.
+
+SVG inline (composant `Sparkline`) — les courbes de cours sont 30 points, dessinées en une vingtaine de lignes de `<path>`. Chart.js aurait apporté son moteur de tooltips/légendes/animations qu'on n'utilise pas ; le composant maison rentre dans le bundle pour rien et reste lisible.
+
+Polices selfhostées (woff2) — Fraunces, Fredoka, JetBrains Mono, Nunito sont servies depuis `assets/fonts/`. Pas de hit réseau vers `fonts.googleapis.com` au runtime : performance prévisible, fonctionne offline, pas de FOUT visible.
+
+CSS vanilla, custom properties — `styles/variables.css` contient les tokens de design (couleurs, ombres, polices, espacements). Le reste est découpé par zone fonctionnelle (`home.css`, `boosters.css`, `collection.css`…). Pas de Tailwind (verbeux dans le markup pour un proto où on tweake beaucoup), pas de CSS Modules (pas de bundler), pas de Sass (les `var()` natives couvrent le besoin).
+
+
+ Backend :
+
+Node.js + Express — même runtime que le frontend (npm commun, types partagés possibles), déploiement simple sur Render. Express reste la lib HTTP la plus prévisible pour une API REST CRUD d'une semaine ; pas de magie cachée.
+
+nodecron — scheduling enprocess, zéro infrastructure supplémentaire. La fluctuation boursière est un job périodique (ex. toutes les 30 s) : nodecron suffit sans Redis, sans Bull, sans worker séparé.
+
+Socket.IO — WebSocket avec fallback longpolling automatique. Les mises à jour de cours doivent être poussées au client sans polling manuel ; Socket.IO gère la reconnexion et le broadcast par room (une room par famille de cartes) nativement.
+
+
+
+ Données :
+
+SQLite + bettersqlite3 — la contrainte interdit les BDD complexes. SQLite est un fichier binaire, zéro serveur, zéro configuration réseau, supporte les transactions ACID, et `bettersqlite3` utilise des appels synchrones qui simplifient le code sans callback hell. Sur Render, le fichier persiste via un disque attaché (ou on accepte la réinitialisation au redeploy, ce qui est acceptable pour un proto de semaine).
+
+Pourquoi pas localStorage ? Les données de trade sont multiutilisateurs : elles doivent vivre côté serveur. localStorage est unilatéral par navigateur.
+
+JWT (jsonwebtoken) — session stateless : le backend ne stocke pas de session en mémoire, ce qui facilite le déploiement sur Render (une seule instance). Le token contient l'identifiant joueur, vérifié à chaque requête sensible (trade, ouverture de booster).
+
+
+
+ Infra :
+
+Vercel (frontend) + Render (backend) — tiers gratuits, déploiement depuis GitHub, zeroconfig. La séparation frontend/backend permet de ne pas payer le cold start Render sur chaque interaction UI (les assets statiques sont sur Vercel CDN).
+
+npm workspaces — monorepo simple : `packages/client` et `packages/server` partagent un `types/` commun (interfaces Card, Trade…). Pas besoin de Turborepo ou Nx sur une semaine.
+
+

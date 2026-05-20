@@ -1,0 +1,52 @@
+/* StockDex — Pocket DA: bright, friendly, holo-heavy */
+
+:root {
+  /* Bright pastel base */
+  --bg-0: #c5dff3;          /* sky pastel */
+  --bg-1: #d8eafa;          /* lighter sky */
+  --bg-2: #ffffff;          /* card / panel */
+  --bg-3: #f1f7fd;          /* subtle elevated */
+
+  /* Ink */
+  --ink-0: #0e2557;         /* deep navy */
+  --ink-1: #2a3f74;
+  --ink-2: #5d6f9c;
+  --ink-3: #9eafd0;
+
+  /* Border / hair */
+  --hair: #d6e3f1;
+  --hair-strong: #b9cee3;
+
+  /* Brand */
+  --pri:    #ffd736;        /* sun yellow */
+  --pri-d:  #f1b500;
+  --sec:    #ff5252;        /* coral red — accents/NEW */
+  --sec-d:  #d72e2e;
+  --blue:   #2870e6;        /* friendly blue */
+  --blue-d: #1c54b8;
+
+  /* Movement */
+  --up:   #16a34a;
+  --down: #dc2626;
+
+  /* Sector hues (vibrant) */
+  --sec-energie:  #ff7a3c;
+  --sec-luxe:     #c084fc;
+  --sec-tech:     #38bdf8;
+  --sec-pharma:   #4ade80;
+  --sec-finance:  #818cf8;
+
+  --accent: var(--pri);     /* tweakable, default sun yellow */
+
+  --grid-gap: 22px;
+
+  --serif: "Fraunces", "Cormorant Garamond", Georgia, serif;
+  --display: "Fredoka", "Baloo 2", "Nunito", system-ui, sans-serif;
+  --sans:    "Nunito", system-ui, -apple-system, sans-serif;
+  --mono:    "JetBrains Mono", "SF Mono", Consolas, monospace;
+
+  --shadow-sm: 0 2px 6px rgba(14,37,87,0.08);
+  --shadow-md: 0 8px 24px rgba(14,37,87,0.10);
+  --shadow-lg: 0 24px 60px rgba(14,37,87,0.18);
+  --shadow-pop: 0 8px 0 rgba(14,37,87,0.10);
+}
