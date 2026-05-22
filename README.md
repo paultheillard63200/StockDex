@@ -172,6 +172,7 @@ Fichier `packages/server/.env` :
 | `npm run dev` | Démarre l'API en mode watch (recharge sur édition) |
 | `npm run start` | Démarre l'API en mode production |
 | `npm run server` | Alias de `npm run dev` |
+| `npm test` | Lance la suite de tests automatisés (Node `--test` + supertest) |
 
 Côté `packages/server` :
 
@@ -181,6 +182,24 @@ Côté `packages/server` :
 | `npm run start --workspace @stockdex/server` | API en mode prod |
 | `npm run db:seed --workspace @stockdex/server` | Applique `schema.sql` et insère les 40 sociétés |
 | `npm run db:reset --workspace @stockdex/server` | Supprime puis recrée la base depuis zéro |
+| `npm test --workspace @stockdex/server` | Suite de tests unitaires + intégration (`tests/`) |
+
+### Tests automatisés
+
+La suite vit dans `packages/server/tests/` et utilise le test runner natif de Node 20 (`node:test`) + [supertest](https://www.npmjs.com/package/supertest). Chaque fichier de test ouvre une base SQLite **éphémère** dans `os.tmpdir()` — la base de prod (`data/stockdex.db`) n'est jamais touchée. Couverture actuelle :
+
+- `lib.auth.test.js` — hash bcrypt, signature/vérification JWT
+- `lib.booster.test.js` — tirage des 5 slots, familles valides, gestion d'erreur
+- `routes.health.test.js` — `/health`, 404 sur route inconnue
+- `routes.auth.test.js` — register/login, validations, doublons, identifiants
+- `routes.me.test.js` — profil + taille de collection, auth obligatoire
+- `routes.cards.test.js` — catalogue, filtres famille/rareté, détail, historique
+- `routes.collection.test.js` — collection vide, regroupement par ticker, isolation entre joueurs
+- `routes.boosters.test.js` — ouverture, débit transactionnel, solde insuffisant
+- `routes.market.test.js` — création/annulation/achat, contraintes d'unicité, transferts de propriété
+- `routes.wallet.test.js` — packs publics, crédit authentifié
+
+Lancement rapide : `npm test`.
 
 ---
 

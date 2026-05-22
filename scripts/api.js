@@ -6,7 +6,13 @@
 // `stockdex:logout` que <App> écoute pour basculer sur l'écran de connexion.
 
 (() => {
-  const API_BASE = window.STOCKDEX_API_BASE || 'http://localhost:3001';
+  // En dev : front sur :3000, API sur :3001 (deux process séparés).
+  // En prod (Fly.io & co) : front + API servis par le même domaine → on
+  // tape sur l'origine courante. Surchargeable via window.STOCKDEX_API_BASE.
+  const isLocalhost = window.location.hostname === 'localhost'
+    || window.location.hostname === '127.0.0.1';
+  const API_BASE = window.STOCKDEX_API_BASE
+    || (isLocalhost ? 'http://localhost:3001' : window.location.origin);
   const TOKEN_KEY = 'stockdex_token';
   const USER_KEY  = 'stockdex_user';
 

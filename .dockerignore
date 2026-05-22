@@ -1,0 +1,32 @@
+node_modules
+**/node_modules
+.git
+.gitignore
+.env
+**/.env
+**/.env.local
+*.log
+npm-debug.log*
+.vscode
+.idea
+.DS_Store
+
+# Fichiers SQLite locaux — on veut une DB vierge dans l'image,
+# la DB de prod vit sur le volume Fly monté sur /data.
+packages/server/data/*.db
+packages/server/data/*.db-shm
+packages/server/data/*.db-wal
+packages/server/data/*.db-journal
+
+# Ancien artefact monofichier, lourd, non utilisé en prod
+StockDex V2.html
+
+# Doc / fichiers de travail
+README.md
+stack_technique.txt
+fly.toml
+Dockerfile
+.dockerignore
+
+# Tests (pas nécessaires dans l'image runtime)
+packages/server/tests

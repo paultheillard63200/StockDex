@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "npm run dev --workspace @stockdex/server",
     "start": "npm run start --workspace @stockdex/server",
-    "server": "npm run dev --workspace @stockdex/server"
+    "server": "npm run dev --workspace @stockdex/server",
+    "test": "npm run test --workspace @stockdex/server"
   },
   "engines": {
     "node": ">=20.0.0"

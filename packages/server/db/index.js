@@ -9,10 +9,15 @@ import { mkdirSync, existsSync } from 'node:fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = resolve(__dirname, '..', 'data');
-const DB_PATH = resolve(DATA_DIR, 'stockdex.db');
 
-if (!existsSync(DATA_DIR)) {
-  mkdirSync(DATA_DIR, { recursive: true });
+// Le chemin peut être surchargé via STOCKDEX_DB_PATH — utile en tests pour
+// pointer sur une base éphémère (par ex. dans os.tmpdir()).
+const DB_PATH = process.env.STOCKDEX_DB_PATH
+  ? resolve(process.env.STOCKDEX_DB_PATH)
+  : resolve(DATA_DIR, 'stockdex.db');
+
+if (!existsSync(dirname(DB_PATH))) {
+  mkdirSync(dirname(DB_PATH), { recursive: true });
 }
 
 const db = new Database(DB_PATH);

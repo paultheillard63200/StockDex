@@ -1,0 +1,457 @@
+================================================================================
+                  STOCKDEX — GUIDE DE DÉPLOIEMENT SUR FLY.IO
+                          (Hébergement 100 % gratuit)
+================================================================================
+
+Ce guide te permet de mettre StockDex en ligne sur Internet, gratuitement,
+avec un nom de domaine HTTPS, en ~20 minutes.
+
+Plateforme : Fly.io (free tier — 256 Mo RAM, 1 Go de disque persistant).
+Mode      : mono-service (un seul container sert le frontend + l'API + Socket.IO).
+
+
+================================================================================
+ SOMMAIRE
+================================================================================
+
+  1.  Pourquoi Fly.io et pas autre chose ?
+  2.  Pré-requis
+  3.  Fichiers ajoutés au repo (déjà créés)
+  4.  Installation de flyctl (la CLI)
+  5.  Création du compte Fly.io
+  6.  Initialisation de l'app
+  7.  Création du volume SQLite persistant
+  8.  Injection des secrets (JWT)
+  9.  Premier déploiement
+  10. Vérification que tout fonctionne
+  11. Commandes utiles au quotidien
+  12. Mise à jour de l'app (redéploiement)
+  13. Sauvegarde / restauration de la base SQLite
+  14. Dépannage (FAQ)
+  15. Limites du free tier
+  16. Pour aller plus loin (domaine custom, monitoring…)
+
+
+================================================================================
+ 1. POURQUOI FLY.IO ?
+================================================================================
+
+StockDex a 3 contraintes techniques qui éliminent la plupart des hébergeurs
+gratuits :
+
+  - WebSocket continu (Socket.IO) → besoin d'une machine qui ne s'endort pas.
+  - Ticker cron toutes les 30 s → idem.
+  - Base SQLite fichier → besoin d'un disque persistant.
+
+Render free tier : ❌ s'endort après 15 min d'inactivité.
+Heroku           : ❌ plus de free tier depuis 2022.
+Vercel/Netlify   : ❌ pas de serveur Node persistant (juste serverless).
+Fly.io free      : ✅ machine 24/7, volume persistant 1 Go, WebSocket OK.
+
+Coût : 0 €/mois tant que tu restes dans les limites du free tier.
+
+
+================================================================================
+ 2. PRÉ-REQUIS
+================================================================================
+
+Sur ta machine :
+  - Windows 10/11, macOS ou Linux
+  - PowerShell (Windows) ou Terminal (Mac/Linux)
+  - Une connexion Internet
+  - Node.js ≥ 20 déjà installé (tu l'as déjà puisque le projet tourne)
+  - Le repo StockDex cloné en local
+
+Côté Fly.io :
+  - Une adresse email valide
+  - Une carte bancaire (uniquement pour vérification anti-abus,
+    JAMAIS débitée tant que tu restes dans le free tier).
+
+
+================================================================================
+ 3. FICHIERS AJOUTÉS AU REPO
+================================================================================
+
+Ces fichiers ont déjà été créés à la racine du projet. NE PAS LES SUPPRIMER :
+
+  Dockerfile        → recette pour construire l'image Docker (front+back)
+  .dockerignore     → ce qui est exclu de l'image (node_modules, *.db, etc.)
+  fly.toml          → config Fly.io (région, volumes, healthcheck, etc.)
+
+Modifications faites dans le code (rétro-compatibles, dev local intact) :
+
+  scripts/api.js                → auto-détection localhost vs prod
+  packages/server/app.js        → sert le frontend statique si STATIC_DIR set
+  packages/server/index.js      → lit la variable STATIC_DIR depuis l'env
+
+⚠ IMPORTANT : en local, RIEN NE CHANGE.
+  Tu continues à lancer `npm run dev` + `npx serve .` comme avant.
+  Le mode mono-service ne s'active qu'à l'intérieur du container Docker
+  (où STATIC_DIR=/app est définie).
+
+
+================================================================================
+ 4. INSTALLATION DE FLYCTL (la CLI Fly.io)
+================================================================================
+
+Ouvre un PowerShell en tant qu'utilisateur normal (pas administrateur) et
+tape :
+
+  iwr https://fly.io/install.ps1 -useb | iex
+
+Sur Mac/Linux à la place :
+
+  curl -L https://fly.io/install.sh | sh
+
+Une fois installé, FERME et ROUVRE PowerShell (pour que le PATH soit mis à
+jour), puis vérifie :
+
+  fly version
+
+Tu dois voir quelque chose comme :
+  fly v0.x.x ...
+
+
+================================================================================
+ 5. CRÉATION DU COMPTE FLY.IO
+================================================================================
+
+Toujours dans PowerShell :
+
+  fly auth signup
+
+Cela ouvre ton navigateur sur https://fly.io. Crée le compte :
+  - email + mot de passe
+  - Fly te demande une CB → entrer la tienne (anti-abus, jamais débitée
+    si tu restes dans le free tier).
+
+À la fin, reviens dans PowerShell. La CLI est connectée automatiquement.
+
+Pour vérifier :
+  fly auth whoami
+
+Doit afficher ton email.
+
+
+================================================================================
+ 6. INITIALISATION DE L'APP
+================================================================================
+
+Place-toi à la racine du projet :
+
+  cd "C:\Users\Paul THEILLARD\Desktop\HESIAS\ALM\StockDex"
+
+Puis lance :
+
+  fly launch --no-deploy --copy-config
+
+Réponses au wizard :
+
+  ? Choose an app name           → ex. stockdex-paul
+                                   (doit être unique sur Fly.io,
+                                    minuscules + tirets, pas d'espace)
+
+  ? Choose region                → cdg  (Paris, le plus proche)
+                                   tu peux taper "cdg" directement
+
+  ? Would you like to set up a Postgresql database ?   → No
+  ? Would you like to set up an Upstash Redis ?        → No
+  ? Create .dockerignore from .gitignore ?             → No
+                                   (on a déjà notre .dockerignore optimisé)
+
+  ? Would you like to deploy now ?                     → No
+
+⚠ ÉDITE ENSUITE LE FICHIER `fly.toml` :
+  - Remplace la ligne `app = "stockdex"` par `app = "stockdex-paul"`
+    (ou le nom exact que tu as choisi).
+  - Vérifie que `primary_region = "cdg"` est bien la région choisie.
+
+Sans ça, le déploiement échouera avec "app not found".
+
+
+================================================================================
+ 7. CRÉATION DU VOLUME SQLITE PERSISTANT
+================================================================================
+
+Le volume contient la base SQLite et survit aux redéploiements / redémarrages.
+Sans volume, ta base est wipée à chaque `fly deploy`.
+
+  fly volumes create stockdex_data --size 1 --region cdg
+
+  ? Do you really want to use single node ? → Yes
+  (le free tier ne permet qu'une seule machine, c'est normal)
+
+Vérifie :
+
+  fly volumes list
+
+Doit afficher 1 volume "stockdex_data" de 1 Go en région cdg.
+
+⚠ IMPORTANT : le nom du volume DOIT être exactement `stockdex_data`,
+  c'est ce que `fly.toml` attend dans la section [mounts].
+
+
+================================================================================
+ 8. INJECTION DES SECRETS
+================================================================================
+
+JAMAIS de secret dans `fly.toml` ou dans le Dockerfile.
+Les secrets vivent dans le coffre-fort de Fly et sont injectés en variables
+d'environnement au runtime.
+
+Génère un JWT_SECRET aléatoire et injecte-le en UNE seule commande :
+
+  $secret = node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+  fly secrets set JWT_SECRET=$secret
+
+Tu peux aussi le faire en deux temps si tu préfères voir le secret :
+
+  node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+  # → copie la chaîne affichée
+  fly secrets set JWT_SECRET=la-chaine-collee
+
+Vérifie :
+
+  fly secrets list
+
+Doit afficher JWT_SECRET (avec un hash, pas la valeur).
+
+
+================================================================================
+ 9. PREMIER DÉPLOIEMENT
+================================================================================
+
+Toujours depuis la racine du projet :
+
+  fly deploy
+
+Ce qui se passe :
+  1. flyctl emballe le repo (en respectant .dockerignore) et l'envoie sur
+     les serveurs de build de Fly.
+  2. Fly construit l'image Docker (3-5 min la première fois, le temps de
+     compiler better-sqlite3 pour l'archi ARM).
+  3. L'image est poussée vers la machine.
+  4. La machine démarre :
+     - le script de seed crée la base SQLite avec les 40 sociétés
+     - le serveur Node + Socket.IO démarre sur le port interne 3001
+  5. Healthcheck sur /health → si OK, le trafic est routé.
+  6. flyctl te donne l'URL publique.
+
+Tu verras défiler :
+  ==> Building image
+  ==> Pushing image
+  ==> Creating release
+  ==> Monitoring deployment
+       Successfully deployed!
+       Visit your newly deployed app at https://stockdex-paul.fly.dev
+
+
+================================================================================
+ 10. VÉRIFICATION
+================================================================================
+
+Ouvre l'app dans le navigateur :
+
+  fly open
+
+Tests à faire :
+
+  [ ] La page d'accueil s'affiche (écran d'auth ou home)
+  [ ] Tu peux créer un compte (POST /api/auth/register)
+  [ ] Tu peux te connecter (POST /api/auth/login)
+  [ ] Les sparklines bougent (preuve que Socket.IO marche)
+  [ ] Tu peux ouvrir un booster (POST /api/boosters/open)
+  [ ] Le marketplace est accessible
+
+Vérifie aussi l'API directement :
+
+  https://ton-app.fly.dev/health
+  → doit renvoyer {"status":"ok","db_time":"..."}
+
+  https://ton-app.fly.dev/api/cards
+  → doit renvoyer la liste des 40 cartes
+
+
+================================================================================
+ 11. COMMANDES UTILES AU QUOTIDIEN
+================================================================================
+
+  fly logs              # Voir les logs en direct (Ctrl+C pour quitter)
+  fly status            # État de la machine, IP, version déployée
+  fly apps open         # Ouvrir l'app dans le navigateur
+  fly ssh console       # Shell SSH dans le container
+  fly secrets list      # Lister les secrets (sans les valeurs)
+  fly volumes list      # Lister les volumes
+  fly machine list      # Lister les machines de l'app
+  fly scale show        # Afficher la taille de la VM
+  fly releases          # Historique des déploiements
+
+
+================================================================================
+ 12. MISE À JOUR DE L'APP (redéploiement)
+================================================================================
+
+Workflow type :
+
+  1. Modifie ton code en local
+  2. Teste : npm run dev + npx serve . + npm test
+  3. Commit (git commit -am "...") — optionnel mais recommandé
+  4. Déploie : fly deploy
+
+`fly deploy` est ~30 s à partir du 2e déploiement (cache Docker).
+Aucune downtime : Fly fait du blue/green deployment automatiquement.
+
+Pour faire un rollback en cas de bug en prod :
+
+  fly releases                    # repère la version précédente
+  fly releases rollback <version>
+
+
+================================================================================
+ 13. SAUVEGARDE / RESTAURATION DE LA BASE
+================================================================================
+
+Sauvegarde rapide (depuis ton PC) :
+
+  fly ssh console -C "sqlite3 /data/stockdex.db .dump" > backup-$(date +%Y%m%d).sql
+
+Si la commande date ne marche pas sous PowerShell :
+
+  $date = Get-Date -Format "yyyyMMdd"
+  fly ssh console -C "sqlite3 /data/stockdex.db .dump" > "backup-$date.sql"
+
+Restauration (efface la base actuelle, repart du dump) :
+
+  fly ssh console
+  # une fois dans le container :
+  rm /data/stockdex.db
+  sqlite3 /data/stockdex.db < /tmp/backup.sql
+  exit
+
+(il faudra d'abord uploader le dump via `fly ssh sftp shell`).
+
+Recommandation : fais un dump avant chaque grosse modification de schéma.
+
+
+================================================================================
+ 14. DÉPANNAGE (FAQ)
+================================================================================
+
+▸ "Error: app stockdex not found"
+  → Tu n'as pas mis à jour le `app = "..."` dans fly.toml avec le nom
+    exact choisi à l'étape 6.
+
+▸ "no volume found for mount source stockdex_data"
+  → Tu as oublié l'étape 7. Lance `fly volumes create stockdex_data --size 1
+    --region cdg`.
+
+▸ "out of memory" dans les logs
+  → 256 Mo c'est juste assez. Vérifie qu'aucun ancien process traîne :
+    fly machine list
+    fly machine stop <id_des_anciennes>
+
+▸ "EADDRINUSE" ou "address already in use"
+  → Ne devrait JAMAIS arriver sur Fly. Si oui, redéploie :
+    fly deploy --force-machines
+
+▸ Le ticker (sparklines) ne bouge pas
+  → Soit le cron est désactivé, soit Socket.IO ne passe pas.
+    Vérifie les logs : fly logs | findstr "tick"
+    Tu dois voir des lignes type "[market] tick OK".
+
+▸ "JWT_SECRET is not defined" ou "secretOrPrivateKey must have a value"
+  → Tu as oublié l'étape 8. Lance `fly secrets set JWT_SECRET=...`.
+    Après, Fly redémarre automatiquement la machine.
+
+▸ Build échoue sur "better-sqlite3 ... gyp ERR!"
+  → Le Dockerfile installe déjà python3 + make + g++. Si ça échoue quand
+    même, ouvre un terminal SSH et vérifie l'arch :
+    fly ssh console -C "uname -m"
+    Si arm64 + node 20, c'est censé marcher.
+
+▸ Page blanche en prod / "Failed to load /scripts/app.jsx"
+  → Vérifie que STATIC_DIR=/app est bien dans fly.toml (section [env]).
+    Sans ça, le serveur ne sert pas le frontend.
+
+▸ CORS bloqué
+  → Si tu sers le front depuis un autre domaine (ex. Cloudflare Pages),
+    ajoute :
+      fly secrets set CORS_ORIGIN=https://mon-front.pages.dev
+    Sinon, en mono-service, c'est inutile.
+
+
+================================================================================
+ 15. LIMITES DU FREE TIER
+================================================================================
+
+Ce que Fly.io t'offre gratuitement :
+
+  Machines partagées (shared-cpu-1x)    : utilisation gratuite raisonnable
+  Mémoire                                : 256 Mo par machine
+  Volumes persistants                    : 3 Go au total
+  Trafic sortant                         : 160 Go/mois (largement suffisant)
+  Certificats SSL                        : gratuits et auto-renouvelés
+  IPv6                                   : illimité
+  IPv4 dédiée                            : payante (~2$/mois) — pas nécessaire,
+                                           le DNS .fly.dev marche très bien.
+
+Tu dépasseras quand :
+  - Tu mets l'app à l'échelle horizontale (plusieurs machines)
+  - Tu stockes plus de 3 Go (ne devrait jamais arriver avec SQLite)
+  - Tu reçois plus de 160 Go de trafic sortant par mois (= 30 000 visiteurs)
+
+Pour StockDex en démo / projet d'école : tu es TRÈS LARGEMENT dans le free.
+
+
+================================================================================
+ 16. POUR ALLER PLUS LOIN
+================================================================================
+
+▸ Domaine custom (ex. stockdex.fr) :
+  fly certs create stockdex.fr
+  # puis chez ton registrar : ajouter un AAAA + CNAME vers ton-app.fly.dev
+
+▸ Monitoring :
+  fly dashboard
+  → ouvre l'UI web avec graphes CPU/RAM/trafic.
+
+▸ Logs persistants (au-delà des dernières heures) :
+  Intègre BetterStack / Logtail / Papertrail (free tier dispo).
+
+▸ Sauvegarde auto SQLite vers S3 :
+  Regarde Litestream (https://litestream.io), s'intègre nativement à Fly.
+
+▸ Front sur CDN séparé :
+  Si un jour tu veux héberger le front sur Cloudflare Pages pour décharger
+  Fly, c'est possible :
+    - le front lit window.STOCKDEX_API_BASE = "https://ton-app.fly.dev"
+    - tu ajoutes le domaine du front dans CORS_ORIGIN (fly secrets set)
+
+
+================================================================================
+ RÉSUMÉ EN 7 COMMANDES
+================================================================================
+
+  iwr https://fly.io/install.ps1 -useb | iex          # 1. installer la CLI
+  # (redémarre PowerShell)
+  fly auth signup                                      # 2. créer le compte
+  fly launch --no-deploy --copy-config                 # 3. init l'app
+  # (éditer fly.toml : app = "ton-nom")
+  fly volumes create stockdex_data --size 1 --region cdg   # 4. volume
+  $s = node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+  fly secrets set JWT_SECRET=$s                        # 5. secret JWT
+  fly deploy                                           # 6. premier déploiement
+  fly open                                             # 7. ouvrir l'app
+
+  → Ton app est en ligne sur https://ton-nom.fly.dev en HTTPS, gratuit, 24/7.
+
+
+================================================================================
+ BESOIN D'AIDE ?
+================================================================================
+
+  Docs Fly.io officielles   : https://fly.io/docs/
+  Community Fly.io          : https://community.fly.io/
+  Status Fly.io             : https://status.flyio.net/
+
+================================================================================

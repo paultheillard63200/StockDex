@@ -1,0 +1,73 @@
+# StockDex — configuration Fly.io
+# Free tier : 1 VM partagée 256 Mo + 1 Go de volume persistant.
+#
+# Avant le premier déploiement :
+#   1. fly auth signup                        (compte gratuit)
+#   2. fly launch --no-deploy                 (génère l'app, garde ce fly.toml)
+#      → pendant le wizard, choisis le nom d'app (ex. stockdex-paul)
+#        et la région (cdg = Paris)
+#   3. fly volumes create stockdex_data --size 1 --region cdg
+#   4. fly secrets set JWT_SECRET="$(node -e 'console.log(require(\"crypto\").randomBytes(64).toString(\"hex\"))')"
+#   5. fly deploy
+#
+# IMPORTANT : remplace `app` ci-dessous par le nom choisi à l'étape 2,
+# et `primary_region` par ta région.
+
+app = "stockdex"
+primary_region = "cdg"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "3001"
+  STATIC_DIR = "/app"
+  STOCKDEX_DB_PATH = "/data/stockdex.db"
+  JWT_EXPIRES_IN = "7d"
+  MARKET_TICK_CRON = "*/30 * * * * *"
+  MARKET_TICK_VOLATILITY = "0.04"
+  # Le front et l'API sont sur le même domaine → CORS optionnel.
+  # Décommente et adapte si tu sers le front depuis un autre domaine.
+  # CORS_ORIGIN = "https://mon-front.pages.dev"
+
+# Volume persistant pour la base SQLite (créé via `fly volumes create`).
+[mounts]
+  source = "stockdex_data"
+  destination = "/data"
+
+[[services]]
+  internal_port = 3001
+  protocol = "tcp"
+  # IMPORTANT : on ne suspend JAMAIS la machine, sinon le ticker cron
+  # qui fluctue les cours toutes les 30 s s'arrête.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+    force_https = true
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 200
+    soft_limit = 150
+
+  # Healthcheck HTTP — utilise la route /health du serveur.
+  [[services.http_checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "get"
+    path = "/health"
+    protocol = "http"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+  cpus = 1

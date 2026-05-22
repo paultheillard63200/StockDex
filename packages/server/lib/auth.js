@@ -3,7 +3,8 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 
-const BCRYPT_ROUNDS = 10;
+// Réduit en tests via BCRYPT_ROUNDS pour ne pas ralentir la suite.
+const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS) || 10;
 
 function getSecret() {
   const secret = process.env.JWT_SECRET;

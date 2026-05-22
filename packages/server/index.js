@@ -2,21 +2,11 @@
 // Démarre Express + Socket.IO sur un même httpServer, puis lance le ticker marché.
 
 import http from 'node:http';
-import express from 'express';
-import cors from 'cors';
 
 import db from './db/index.js';
+import { buildApp } from './app.js';
 import { attachSockets } from './sockets/index.js';
 import { startMarketTicker } from './lib/market.js';
-import { notFound, errorHandler } from './middleware/error.js';
-
-import authRoutes from './routes/auth.js';
-import meRoutes from './routes/me.js';
-import cardsRoutes from './routes/cards.js';
-import collectionRoutes from './routes/collection.js';
-import boostersRoutes from './routes/boosters.js';
-import marketRoutes from './routes/market.js';
-import walletRoutes from './routes/wallet.js';
 
 const PORT = Number(process.env.PORT) || 3001;
 
@@ -25,27 +15,12 @@ const corsOrigins = (process.env.CORS_ORIGIN || '')
   .map((s) => s.trim())
   .filter(Boolean);
 
-const app = express();
+// En prod mono-service (Fly.io, Docker), STATIC_DIR pointe vers la racine
+// du repo où vivent index.html, scripts/, styles/, vendor/, assets/.
+// En dev, on ne le définit pas → le front est servi par `npx serve` sur :3000.
+const staticDir = process.env.STATIC_DIR || null;
 
-app.use(cors({ origin: corsOrigins.length ? corsOrigins : true, credentials: true }));
-app.use(express.json({ limit: '256kb' }));
-
-// Healthcheck — pratique pour Render et pour vérifier que la DB répond.
-app.get('/health', (_req, res) => {
-  const { now } = db.prepare("SELECT datetime('now') AS now").get();
-  res.json({ status: 'ok', db_time: now });
-});
-
-app.use('/api/auth', authRoutes);
-app.use('/api/me', meRoutes);
-app.use('/api/me/collection', collectionRoutes);
-app.use('/api/cards', cardsRoutes);
-app.use('/api/boosters', boostersRoutes);
-app.use('/api/market', marketRoutes);
-app.use('/api/wallet', walletRoutes);
-
-app.use(notFound);
-app.use(errorHandler);
+const app = buildApp({ corsOrigins, staticDir });
 
 const httpServer = http.createServer(app);
 const io = attachSockets(httpServer, corsOrigins.length ? corsOrigins : '*');
